@@ -28,7 +28,6 @@ const CIRCLE_RADIUS = 50;
 
 /* Extend Console to avoid TS errors */
 declare global {
-
     interface Console {
         geom:any,
         user:any,

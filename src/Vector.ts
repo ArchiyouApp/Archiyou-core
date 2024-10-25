@@ -274,7 +274,7 @@ export class Vector extends Point
     }
 
     /** Check if this Vector is normal to the another: abs(<me>.Angle(Other) - PI/2.) <= AngularToleranc */
-    @checkInput('PointLike', Vector)
+    @checkInput('PointLike', 'Vector')
     isNormalTo(other:PointLike, ...args):boolean // NOTE: args to signify that checkInput will gather them and avoid TS warnings
     {  
         return this._ocVector.IsNormal( (other as Vector)._ocVector, this._oc.SHAPE_TOLERANCE); // auto converted to Vector @with checkInput
@@ -576,7 +576,7 @@ export class Vector extends Point
         @param position position of mirror axis
         @param direction direction of mirror axis - default is the Y axis
     */
-    @checkInput( [ ['PointLike',[0,0,0]] , ['PointLike',[0,1,0]] ], [Vector, Vector]) // default values in checkInput
+    @checkInput( [ ['PointLike',[0,0,0]] , ['PointLike',[0,1,0]] ], ['Vector', 'Vector']) // default values in checkInput
     mirror(position?:PointLike, direction?:PointLike):Vector
     {
         let positionPoint = (position as Vector).toPoint(); // auto converted to Vector

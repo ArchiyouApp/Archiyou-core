@@ -493,7 +493,7 @@ export class Shell extends Shape
 
     /** Stitch two Shells together to create a Solid (EXPERIMENTAL) */
     @protectOC([`This is an experimental method. Might not work!`])
-    @checkInput(Shell, 'auto')
+    @checkInput('Shell', 'auto')
     _bridge(other:Shell):ISolid
     {
         let offsetShellWire = (other as Shell).outerWire();

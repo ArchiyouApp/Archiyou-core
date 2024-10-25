@@ -573,15 +573,14 @@ function _getArgNames(func:any):Array<string>
 /** 
 *   Decorator for caching the results of operations and getting them when needed
 */
-export function cacheOperation(targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor
+export function cacheOperation(originalMethod:any, context:ClassMethodDecoratorContext): any
 {
     // NOTE: we use this decorator without arguments so this structure is more simple than @checkInput
-    const wrappedMethod = descriptor.value; // this is the raw function being wrapped by decorator
-    const wrappedMethodName = propertyKey; // propertyKey contains the name of wrapped method
+    const wrappedMethod = originalMethod; // this is the raw function being wrapped by decorator
+    const wrappedMethodName = String(context.name); // propertyKey contains the name of wrapped method
 
-    descriptor.value = function(...args )
+    function replacementMethod(this:any, ...args:any)
     {  
-
         let cache = this._geom._cache;
         let hash = _hashOp(wrappedMethodName, args)
 
@@ -601,7 +600,7 @@ export function cacheOperation(targetPrototype: any, propertyKey: string, descri
         
     }
 
-    return descriptor;
+    return replacementMethod;
 }
 
 /** Hash arguments (parameters and values with function name) */
@@ -744,23 +743,20 @@ function _generateCheckError(className:string, wrappedMethod:Function, wrappedMe
     @param inputChecks - Per input the desired checks. NOTE: we can only supply typeguard functions (not types) or Classes or a Array with check and default value 
     @param uniformizeToTypes - Per input supply a type (Class or typeguard function) to convert into
  */
-export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Array<any>): MethodDecorator
+export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Array<any>): any
 {
     inputChecks = !Array.isArray(inputChecks) ? [inputChecks] : inputChecks;
     uniformizeToTypes = !Array.isArray(uniformizeToTypes) ? [uniformizeToTypes] : uniformizeToTypes;
 
-
-    return function (targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor
+    // New TS5 decorators: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html
+    // originalMethod: any, context: ClassMethodDecoratorContext
+    //targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor
+    return function (originalMethod: any, context: ClassMethodDecoratorContext):any
     {
-        /*  target is Prototype function ( NOT instance! ): we can actually just use (this) in the descriptor function
-            propertyKey is name of the wrapped method
-            descriptor is all information of wrapped method { configurable, enumerable, value : function, writable }
-        */
-
-        const wrappedMethod = descriptor.value;
+        const originalMethodName = String(context.name);
 
         // wrap method
-        descriptor.value = function(...args)
+        function replacementMethod(this: any, ...args: any[])
         {
             // the real inputs the wrapped method gets
             let inputValues = args;
@@ -768,7 +764,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
             // test decorator configuration consistency
             if (inputChecks.length != uniformizeToTypes.length)
             {
-                console.warn(`${propertyKey}::@checkInput: number of inputChecks(${inputChecks.length}) is not the same as uniformizeToTypes (${uniformizeToTypes.length}): Check decorator config!`);
+                console.warn(`${originalMethodName}::@checkInput: number of inputChecks(${inputChecks.length}) is not the same as uniformizeToTypes (${uniformizeToTypes.length}): Check decorator config!`);
             }
             
             /* !!!! IMPORTANT: Because we only iterate inputs, we don't check the inputs that are not coming in!
@@ -777,7 +773,6 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
             */
             // do the checks
             let allCorrect = true;
-            let wrappedMethodName = propertyKey;
             //let curClassName = this.constructor.name;
             let checkedInputValues = inputValues; // all checked input values go here - we plug these later in the wrapped method
 
@@ -816,7 +811,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
 
                 if (!check)
                 {
-                    console.warn(`Error @checkInput(${this}.${propertyKey}{ .. }). Could not get check function for given typeTarget: "${decoratorTargetType}": Check @checkInput(${propertyKey}) config! Total @checkInput checks: ${inputChecks}`)
+                    console.warn(`Error @checkInput(${this}.${originalMethodName}{ .. }). Could not get check function for given typeTarget: "${decoratorTargetType}": Check @checkInput(${propertyKey}) config! Total @checkInput checks: ${inputChecks}`)
                     allCorrect = false;
                 }
                 else
@@ -855,7 +850,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
                             // generate error message for both
                             if (isCheckError)
                             { 
-                                _generateCheckError(this.constructor.name, wrappedMethod, wrappedMethodName, decoratorTargetType, checkArgs, inputCheckIndex); 
+                                _generateCheckError(this.constructor.name, originalMethod, originalMethodName, decoratorTargetType, checkArgs, inputCheckIndex); 
                             }
                         }
 
@@ -864,7 +859,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
                     {
                         if (!(typeof curValue == check))
                         {
-                            _generateCheckError(this.constructor.name, wrappedMethod, wrappedMethodName, decoratorTargetType, curValue, inputCheckIndex)
+                            _generateCheckError(this.constructor.name, originalMethod, originalMethodName, decoratorTargetType, curValue, inputCheckIndex)
                             allCorrect = false;
                         }  
                     }
@@ -913,7 +908,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
             if (allCorrect)
             {
                 // really run wrapped method with arguments
-                let output = wrappedMethod.apply(this, checkedInputValues); // arguments needs to be an Array!
+                let output = originalMethod.apply(this, checkedInputValues); // arguments needs to be an Array!
                 return output;
             }
             else {
@@ -923,8 +918,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
             
         }
 
-        return descriptor;
-
+        return replacementMethod;
         
     };
 }
@@ -932,13 +926,13 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
 //// SCENE MANAGEMENT ////
 
 
-export function addResultShapesToScene(targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor
+export function addResultShapesToScene(originalMethod: any, context: ClassMethodDecoratorContext): any
 {
     // NOTE: we use this decorator without arguments so this structure is more simple than @checkInput
-    const wrappedMethod = descriptor.value; // this is the raw function being wrapped by decorator
-    const wrappedMethodName = propertyKey; // propertyKey contains the name of wrapped method
+    const wrappedMethod = originalMethod; // this is the raw function being wrapped by decorator
+    const wrappedMethodName = String(context.name);; // propertyKey contains the name of wrapped method
 
-    descriptor.value = function(...args )
+    function replacementMethod(this:any, ...args)
     {  
         let outputShapeOrShapes = wrappedMethod.apply(this, args); // capture Shape
         if (Shape.isShape(outputShapeOrShapes) || ShapeCollection.isShapeCollection(outputShapeOrShapes))
@@ -954,7 +948,7 @@ export function addResultShapesToScene(targetPrototype: any, propertyKey: string
         
     }
 
-    return descriptor;
+    return replacementMethod;
 }
 
 
@@ -963,21 +957,21 @@ export function addResultShapesToScene(targetPrototype: any, propertyKey: string
 /** 
 *   Decorator to catch errors in OC and give sane error messages
 */
-export function protectOC(hints?:string|Array<string>): MethodDecorator
+export function protectOC(hints?:string|Array<string>): any
 {
     let hintsArr:Array<string> = (!Array.isArray(hints)) ? [hints] : hints;
 
-    return function (targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor
+    return function (originalMethod: any, context: ClassMethodDecoratorContext): any
     {
         /*  target is Prototype function ( NOT instance! ): we can actually just use (this) in the descriptor function
             propertyKey is name of the wrapped method
             descriptor is all information of wrapped method { configurable, enumerable, value : function, writable }
         */
 
-        const wrappedMethod = descriptor.value;
-        const wrappedMethodName = propertyKey; // propertyKey contains the name of wrapped method
+        const wrappedMethod = originalMethod;
+        const wrappedMethodName = String(context.name); // propertyKey contains the name of wrapped method
     
-        descriptor.value = function(...args)
+        function replacementMethod(this:any, ...args:any)
         {
             try 
             {
@@ -1010,7 +1004,7 @@ export function protectOC(hints?:string|Array<string>): MethodDecorator
             }
         }
         
-        return descriptor;
+        return replacementMethod;
     };
 }
 
@@ -1021,12 +1015,12 @@ function sketchIsActive(geom:Geom):boolean
     return geom && (geom.activeSketch instanceof Sketch);
 }
 
-export function asSketch(targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor
+export function asSketch(originalMethod: any, context: ClassMethodDecoratorContext): any
 {
-      const wrappedMethod = descriptor.value;
-      const wrappedMethodName = propertyKey;
+      const wrappedMethod = originalMethod;
+      const wrappedMethodName = String(context.name);
 
-      descriptor.value = function(...args )
+      function replacementMethod (this:any, ...args:any)
       {  
           if(!sketchIsActive(this))
           {
@@ -1049,6 +1043,6 @@ export function asSketch(targetPrototype: any, propertyKey: string, descriptor: 
           
       }
 
-      return descriptor;
+      return replacementMethod;
   }
   

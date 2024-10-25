@@ -31,7 +31,7 @@
     "jest": "^27.5.1",
     "ts-jest": "27.1.4",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.2"
+    "typescript": "5.6.3"
   },
   "resolutions": {
     "pdfkit/**/fontkit": "2.0.2"
