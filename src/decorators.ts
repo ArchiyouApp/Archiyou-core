@@ -749,8 +749,6 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
     uniformizeToTypes = !Array.isArray(uniformizeToTypes) ? [uniformizeToTypes] : uniformizeToTypes;
 
     // New TS5 decorators: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-0.html
-    // originalMethod: any, context: ClassMethodDecoratorContext
-    //targetPrototype: any, propertyKey: string, descriptor: PropertyDescriptor
     return function (originalMethod: any, context: ClassMethodDecoratorContext):any
     {
         const originalMethodName = String(context.name);
@@ -929,7 +927,7 @@ export function checkInput(inputChecks:any|Array<any>, uniformizeToTypes:any|Arr
 export function addResultShapesToScene(originalMethod: any, context: ClassMethodDecoratorContext): any
 {
     // NOTE: we use this decorator without arguments so this structure is more simple than @checkInput
-    const wrappedMethod = originalMethod; // this is the raw function being wrapped by decorator
+    const wrappedMethod = originalMethod; // this is the raw functiony being wrapped by decorator
     const wrappedMethodName = String(context.name);; // propertyKey contains the name of wrapped method
 
     function replacementMethod(this:any, ...args)
